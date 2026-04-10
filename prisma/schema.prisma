@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  focusAreas    UserFocusArea[]
+  briefingItems BriefingItem[]
+  conversations ChatConversation[]
+}
+
+model UserFocusArea {
+  id        String @id @default(cuid())
+  userId    String
+  areaSlug  String
+  areaLabel String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, areaSlug])
+}
+
+model Paper {
+  id            String   @id @default(cuid())
+  source        String
+  externalId    String   @unique
+  title         String
+  authors       String[]
+  abstract      String
+  journal       String?
+  publishedDate DateTime
+  url           String
+  aiSummary     String?
+  embedding     Float[]
+  metadata      Json     @default("{}")
+  ingestedAt    DateTime @default(now())
+
+  briefingItems BriefingItem[]
+}
+
+model BriefingItem {
+  id                   String   @id @default(cuid())
+  userId               String
+  paperId              String
+  relevanceScore       Float
+  relevanceExplanation String?
+  isCrossFieldSpark    Boolean  @default(false)
+  briefingDate         DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, paperId, briefingDate])
+}
+
+model ChatConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("New Conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  citations      Json     @default("[]")
+  createdAt      DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
